@@ -1,0 +1,122 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "automationAccountName": {
+        "type": "string",
+        "metadata": {
+          "description": "Automation account name."
+        }
+      },
+      "ApplicationId": {
+        "type": "string",
+        "defaultValue": "",
+        "metadata": {
+          "description": "ApplicationID of the service principal."
+        }
+      },
+      "ClientKey": {
+        "type": "string",
+        "defaultValue": "",
+        "metadata": {
+          "description": "The service principal application key"
+        }
+      }
+    },
+    "variables": {
+      "location": "[resourceGroup().location]",
+      "connectionTypeName": "AutomationAzureConnection",
+      "connectionName": "RunAsConnection"
+    },
+    "resources": [
+      {
+          "name": "[parameters('automationAccountName')]",
+          "type": "Microsoft.Automation/automationAccounts",
+          "apiVersion": "2015-10-31",
+          "properties": {
+            "sku": {
+              "name": "Basic"
+            }
+          },
+          "location": "[variables('location')]"
+      },
+      {
+        "type": "Microsoft.Automation/automationAccounts/connectionTypes",
+        "apiVersion": "2015-10-31",
+        "name": "[concat(parameters('automationAccountName'), '/', variables('connectionTypeName'))]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+        ],
+        "properties": {
+            "isGlobal": false,
+            "fieldDefinitions": {
+                "ApplicationId": {
+                    "isEncrypted": true,
+                    "isOptional": false,
+                    "type": "System.String"
+                },
+                "TenantId": {
+                    "isEncrypted": true,
+                    "isOptional": false,
+                    "type": "System.String"
+                },
+                "ClientKey": {
+                    "isEncrypted": true,
+                    "isOptional": false,
+                    "type": "System.String"
+                },
+                "SubscriptionId": {
+                    "isEncrypted": false,
+                    "isOptional": false,
+                    "type": "System.String"
+                }
+            }
+        }
+      },
+      {
+        "type": "Microsoft.Automation/automationAccounts/connections",
+        "apiVersion": "2015-10-31",
+        "name": "[concat(parameters('automationAccountName'), '/', variables('connectionName'))]",
+        "dependsOn": [
+          "[resourceId('Microsoft.Automation/automationAccounts/connectionTypes', parameters('automationAccountName'), variables('connectionTypeName'))]"
+        ],
+        "properties": {
+            "connectionType": {
+                "name": "[variables('connectionTypeName')]"
+            },
+            "fieldDefinitionValues": {
+              "SubscriptionId": "[subscription().subscriptionId]",
+              "TenantId": "[subscription().tenantId]",
+              "ApplicationId":"[parameters('ApplicationId')]",
+              "ClientKey": "[parameters('ClientKey')]"
+            }
+        }
+      },
+      {
+        "type": "Microsoft.Automation/automationAccounts/modules",
+        "apiVersion": "2015-10-31",
+        "name": "[concat(parameters('automationAccountName'), '/Az.Accounts')]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Automation/automationAccounts', parameters('automationAccountName'))]"
+        ],
+        "properties": {
+            "contentLink": {
+              "uri": "https://www.powershellgallery.com/api/v2/package/Az.Accounts/2.2.8"
+            }
+        }
+      },
+      {
+        "type": "Microsoft.Automation/automationAccounts/modules",
+        "apiVersion": "2015-10-31",
+        "name": "[concat(parameters('automationAccountName'), '/Az.Compute')]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Automation/automationAccounts/modules', parameters('automationAccountName'), 'Az.Accounts')]"
+        ],
+        "properties": {
+          "contentLink": {
+            "uri": "https://www.powershellgallery.com/api/v2/package/Az.Compute/4.11.0"
+          }
+        }
+      }
+    ]
+}

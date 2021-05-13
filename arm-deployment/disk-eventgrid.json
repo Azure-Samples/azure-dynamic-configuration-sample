@@ -1,0 +1,61 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "webhookUri": {
+        "type": "string",
+        "metadata": {
+          "description": "The URI of Azure Automation Runbook"
+        }
+      }
+    },
+    "variables": {
+      "resourceGroupName": "[resourceGroup().name]",
+      "topicResourceGroupPrefix": "[replace(variables('resourceGroupName'),'_','-')]",
+      "topicName": "[concat(variables('topicResourceGroupPrefix'), '-topic')]",
+      "eventGridSubscriptionName": "[concat(variables('topicResourceGroupPrefix'), '-eventSubscription')]"
+    },
+    "resources": [
+      {
+        "name": "[variables('topicName')]",
+        "type": "Microsoft.EventGrid/systemTopics",
+        "location": "global",
+        "apiVersion": "2020-04-01-preview",
+        "properties": {
+          "source": "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('resourceGroupName'))]",
+          "topicType": "Microsoft.Resources.ResourceGroups"
+        }
+      },
+      {
+        "name": "[concat(variables('topicName'), '/', variables('eventGridSubscriptionName'))]",
+        "type": "Microsoft.EventGrid/systemTopics/eventSubscriptions",
+        "apiVersion": "2020-04-01-preview",
+        "properties": {
+          "destination": {
+            "endpointType": "WebHook",
+            "properties": {
+                "endpointUrl": "[parameters('webhookUri')]"
+            }
+          },
+          "filter": {
+            "includedEventTypes": [
+                "Microsoft.Resources.ResourceWriteSuccess"
+            ],
+            "advancedFilters": [
+              {
+                "values": [
+                  "providers/Microsoft.Compute/disks"
+                ],
+                "operatorType": "StringContains",
+                "key": "subject"
+              }
+            ]
+          },
+          "eventDeliverySchema": "EventGridSchema"
+        },
+        "dependsOn": [
+          "[resourceId('Microsoft.EventGrid/systemTopics', variables('topicName'))]"
+        ]
+      }
+    ]
+}
