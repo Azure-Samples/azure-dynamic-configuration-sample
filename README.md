@@ -61,6 +61,6 @@ To run the sample, follow these steps:
 
 ## Resources
 
-- Link to supporting information
-- Link to similar sample
-- ...
+- [Azure Event Grid](https://docs.microsoft.com/en-us/azure/event-grid/overview)
+- [Azure Automation](https://azure.microsoft.com/en-us/services/automation/)
+- [Restrict import/export access for managed disks](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/disks-export-import-private-links-cli)
